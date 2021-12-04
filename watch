@@ -4,12 +4,12 @@
 
 function usage {
 cat <<-EOF
-	Usage: $PROGNAME [OPTIONS] <local-path> <remote-path>
-	Sync s3 directory locally and backup changed files on exit
+  Usage: $PROGNAME [OPTIONS] <local-path> <remote-path>
+  Sync s3 directory locally and backup changed files on exit
 
-	  --force-restore      restore even if local directory is not empty
+    --force-restore      restore even if local directory is not empty
 
-	   eg: $PROGNAME /data s3://bucket/dir
+     eg: $PROGNAME /data s3://bucket/dir
 EOF
 }
 
@@ -38,14 +38,18 @@ done
 
 PROGNAME=$0
 LOCAL=$1
-REMOTE=$2
+REMOTE=$(echo $2 | sed -e "s#.*/##")
+BUCKET=$(echo $2 | sed -e "s#s3://\(.*\)/.*#\1#")
+# $ENDPOINT_URL typically looks like https://cos.na-ashburn.myqcloud.com
+REGION=$(echo $ENDPOINT_URL | sed -e "s#https://cos.##" | sed -e "s#.myqcloud.com##")
+
+echo "remote: $REMOTE"
+echo "bucket: $BUCKET"
+echo "region: $REGION"
+
 HEALTHCHECK_FILE=/var/healthy.txt
 
-if [ "$ENDPOINT_URL" ]; then
-  AWS="aws --endpoint-url $ENDPOINT_URL"
-else
-  AWS=aws
-fi
+AWS='coscmd'
 
 function restore {
   if [ "$(ls -A $LOCAL)" ]; then
@@ -55,15 +59,17 @@ function restore {
   fi
 
   echo "restoring $REMOTE => $LOCAL"
-  if ! $AWS s3 sync "$REMOTE" "$LOCAL"; then
+  if ! $AWS download -r -s -y --delete "$REMOTE" "$LOCAL"; then
     error_exit "restore failed"
   fi
   touch $HEALTHCHECK_FILE
 }
 
+coscmd config -a $AWS_ACCESS_KEY_ID -s $AWS_SECRET_ACCESS_KEY -b $BUCKET -r $REGION
+
 function backup {
   echo "backup $LOCAL => $REMOTE"
-  if ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS; then
+  if ! $AWS upload -r -s -y --delete "$LOCAL" "$REMOTE" ; then
     echo "backup failed" 1>&2
     rm $HEALTHCHECK_FILE
     return 1
@@ -73,7 +79,7 @@ function backup {
 
 function final_backup {
   echo "backup $LOCAL => $REMOTE"
-  while ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS; do
+  while ! $AWS upload -r -s -y --delete "$LOCAL" "$REMOTE" ; do
     echo "backup failed, will retry" 1>&2
     sleep 1
   done
