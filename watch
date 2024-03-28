@@ -60,7 +60,7 @@ function restore {
   fi
 
   echo "restoring $REMOTE => $LOCAL"
-  if ! $AWS s3 sync "$REMOTE" "$LOCAL" $EXCLUDE_PATTERN | ts '[%F %T]'; then
+  if ! $AWS s3 sync "$REMOTE" "$LOCAL" $EXCLUDE_PATTERN; then
     error_exit "restore failed"
   fi
   touch $HEALTHCHECK_FILE
@@ -68,7 +68,7 @@ function restore {
 
 function backup {
   echo "backup $LOCAL => $REMOTE"
-  if ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS $EXCLUDE_PATTERN | ts '[%F %T]'; then
+  if ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS $EXCLUDE_PATTERN; then
     echo "backup failed" 1>&2
     rm $HEALTHCHECK_FILE
     return 1
@@ -78,7 +78,7 @@ function backup {
 
 function final_backup {
   echo "backup $LOCAL => $REMOTE"
-  while ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS $EXCLUDE_PATTERN | ts '[%F %T]'; do
+  while ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS $EXCLUDE_PATTERN; do
     echo "backup failed, will retry" 1>&2
     sleep 1
   done

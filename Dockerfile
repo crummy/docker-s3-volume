@@ -1,7 +1,7 @@
 FROM alpine:3.10
 LABEL maintainer="Malcolm Crum <crummynz@gmail.com>"
 
-RUN apk --no-cache add bash py3-pip moreutils && \
+RUN apk --no-cache add bash py3-pip && \
     pip3 install --no-cache-dir awscli
 ADD watch /watch
 
