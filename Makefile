@@ -1,4 +1,4 @@
-NAME = elementar/s3-volume
+NAME = crummy/s3-volume
 
 .PHONY: build release
 

@@ -40,11 +40,16 @@ PROGNAME=$0
 LOCAL=$1
 REMOTE=$2
 HEALTHCHECK_FILE=/var/healthy.txt
+TIMESTAMPS="ts '[%Y-%m-%d %H:%M:%S]'"
 
 if [ "$ENDPOINT_URL" ]; then
   AWS="aws --endpoint-url $ENDPOINT_URL"
 else
-  AWS=aws
+  AWS="aws"
+fi
+
+if [ "$EXCLUDE_PATTERN" ]; then
+  S3_EXCLUDE_FLAGS="--exclude $EXCLUDE_PATTERN"
 fi
 
 function restore {
@@ -55,7 +60,7 @@ function restore {
   fi
 
   echo "restoring $REMOTE => $LOCAL"
-  if ! $AWS s3 sync "$REMOTE" "$LOCAL"; then
+  if ! $AWS s3 sync "$REMOTE" "$LOCAL" $EXCLUDE_PATTERN | $TIMESTAMPS; then
     error_exit "restore failed"
   fi
   touch $HEALTHCHECK_FILE
@@ -63,7 +68,7 @@ function restore {
 
 function backup {
   echo "backup $LOCAL => $REMOTE"
-  if ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS; then
+  if ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS $EXCLUDE_PATTERN | $TIMESTAMPS; then
     echo "backup failed" 1>&2
     rm $HEALTHCHECK_FILE
     return 1
@@ -73,7 +78,7 @@ function backup {
 
 function final_backup {
   echo "backup $LOCAL => $REMOTE"
-  while ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS; do
+  while ! $AWS s3 sync "$LOCAL" "$REMOTE" $S3_SYNC_FLAGS $EXCLUDE_PATTERN | $TIMESTAMPS; do
     echo "backup failed, will retry" 1>&2
     sleep 1
   done

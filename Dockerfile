@@ -1,7 +1,8 @@
 FROM alpine:3.10
-label maintainer="Elementar Sistemas <contato@elementarsistemas.com.br>"
+LABEL maintainer="Malcolm Crum <crummynz@gmail.com>"
 
-RUN apk --no-cache add bash py3-pip && pip3 install --no-cache-dir awscli
+RUN apk --no-cache add bash py3-pip moreutils && \
+    pip3 install --no-cache-dir awscli
 ADD watch /watch
 
 VOLUME /data
